@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#176b5b">
+  <meta name="description" content="마트별 장보기 목록과 당일 지출을 간편하게 관리하는 앱">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>오늘의 장보기</title>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">MY SHOPPING LIST</p>
+      <h1>오늘의 장보기</h1>
+    </div>
+    <button id="installBtn" class="install-btn" hidden>앱 설치</button>
+  </header>
+
+  <main>
+    <section class="date-panel panel">
+      <div class="date-line">
+        <label for="shoppingDate">장보기 날짜</label>
+        <input type="date" id="shoppingDate">
+        <button id="todayBtn" class="text-btn">오늘</button>
+      </div>
+      <div class="date-actions">
+        <button id="newDayBtn" class="secondary-btn">새 장보기 시작</button>
+        <button id="finishDayBtn" class="secondary-btn">오늘 장보기 종료</button>
+      </div>
+      <p id="dateNotice" class="hint">날짜별 내역은 이 기기에 자동 저장됩니다.</p>
+    </section>
+
+    <section class="summary-grid" aria-label="금액 요약">
+      <article class="summary-card">
+        <span>구매 완료</span><strong id="purchasedTotal">0원</strong>
+      </article>
+      <article class="summary-card">
+        <span>미구매</span><strong id="remainingTotal">0원</strong>
+      </article>
+      <article class="summary-card total-card">
+        <span>당일 전체 합계</span><strong id="dayTotal">0원</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">STORE</p>
+          <h2>마트 선택</h2>
+        </div>
+        <span id="storeCount" class="count-pill">6개 마트</span>
+      </div>
+      <div id="storeTabs" class="store-tabs"></div>
+      <button id="customStoreNameBtn" class="text-btn custom-name-btn">여섯 번째 마트 이름 변경</button>
+      <div class="store-total-line">
+        <span id="selectedStoreName">이마트</span>
+        <strong id="selectedStoreTotal">0원</strong>
+      </div>
+    </section>
+
+    <section class="panel list-panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">ITEMS</p>
+          <h2>상품 목록</h2>
+        </div>
+        <span id="itemCount" class="count-pill">0개</span>
+      </div>
+
+      <form id="itemForm" class="item-form">
+        <div class="photo-control">
+          <label for="photoInput" class="photo-button">＋ 사진 추가</label>
+          <input id="photoInput" type="file" accept="image/*" capture="environment">
+          <img id="photoPreview" alt="선택한 상품 사진 미리보기" hidden>
+          <button type="button" id="clearPhotoBtn" class="clear-photo" hidden>사진 삭제</button>
+        </div>
+        <label class="field-label" for="itemName">상품명</label>
+        <input id="itemName" type="text" maxlength="80" placeholder="예: 우유 1L" required>
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="itemPrice">단가(원)</label>
+            <input id="itemPrice" type="number" min="0" step="1" inputmode="numeric" placeholder="0" required>
+          </div>
+          <div>
+            <label class="field-label" for="itemQty">수량</label>
+            <input id="itemQty" type="number" min="1" step="1" value="1" inputmode="numeric" required>
+          </div>
+        </div>
+        <div id="formAmount" class="form-amount">상품 금액 <strong>0원</strong></div>
+        <div class="form-buttons">
+          <button type="submit" id="saveItemBtn" class="primary-btn">상품 추가</button>
+          <button type="button" id="cancelEditBtn" class="secondary-btn" hidden>수정 취소</button>
+        </div>
+      </form>
+
+      <div class="list-subheading">
+        <h3>구매할 상품 <span id="todoCount">0</span></h3>
+        <span>상품명 가나다순</span>
+      </div>
+      <div id="todoList" class="item-list"></div>
+      <div class="list-subheading completed-heading">
+        <h3>구매 완료 <span id="doneCount">0</span></h3>
+        <span>완료 상품은 아래에 표시</span>
+      </div>
+      <div id="doneList" class="item-list"></div>
+    </section>
+
+    <section class="panel store-summary-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">DAILY SUMMARY</p><h2>마트별 합계</h2></div>
+      </div>
+      <div id="storeSummary" class="store-summary"></div>
+    </section>
+    <p class="footer-note">데이터는 현재 사용 중인 브라우저의 기기에 저장됩니다. 브라우저 데이터 삭제 또는 기기 변경 전에는 별도 백업을 권장합니다.</p>
+  </main>
+
+  <dialog id="confirmDialog">
+    <form method="dialog" class="dialog-content">
+      <h2 id="dialogTitle">확인</h2>
+      <p id="dialogMessage"></p>
+      <div class="dialog-actions">
+        <button value="cancel" class="secondary-btn">취소</button>
+        <button value="ok" class="primary-btn">확인</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
