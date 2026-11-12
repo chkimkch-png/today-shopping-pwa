@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#176b5b">
   <meta name="description" content="마트별 장보기 목록과 당일 지출을 간편하게 관리하는 앱">
   <link rel="manifest" href="manifest.webmanifest">
@@ -12,74 +12,54 @@
   <title>오늘의 장보기</title>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">MY SHOPPING LIST</p>
+  <!-- 상단 고정 영역: 제목 · 날짜 · 구매/미구매 · 마트 선택 + 당일 합계 -->
+  <div class="sticky-top" id="stickyTop">
+    <header class="topbar">
       <h1>오늘의 장보기</h1>
+      <button id="installBtn" class="install-btn" hidden>앱 설치</button>
+    </header>
+    <div class="sticky-body">
+      <div class="date-line">
+        <input type="date" id="shoppingDate" aria-label="장보기 날짜">
+        <button id="todayBtn" class="text-btn">오늘</button>
+        <button id="newDayBtn" class="mini-btn">새 장보기</button>
+        <button id="finishDayBtn" class="mini-btn">장보기 종료</button>
+      </div>
+      <div class="summary-row" aria-label="금액 요약">
+        <div class="chip"><span>구매 완료</span><strong id="purchasedTotal">0원</strong></div>
+        <div class="chip"><span>미구매</span><strong id="remainingTotal">0원</strong></div>
+      </div>
+      <div class="store-row">
+        <div id="storeTabs" class="store-tabs" role="group" aria-label="마트 선택"></div>
+        <div class="total-card"><span>당일 전체 합계</span><strong id="dayTotal">0원</strong></div>
+      </div>
     </div>
-    <button id="installBtn" class="install-btn" hidden>앱 설치</button>
-  </header>
+  </div>
 
   <main>
-    <section class="date-panel panel">
-      <div class="date-line">
-        <label for="shoppingDate">장보기 날짜</label>
-        <input type="date" id="shoppingDate">
-        <button id="todayBtn" class="text-btn">오늘</button>
-      </div>
-      <div class="date-actions">
-        <button id="newDayBtn" class="secondary-btn">새 장보기 시작</button>
-        <button id="finishDayBtn" class="secondary-btn">오늘 장보기 종료</button>
-      </div>
-      <p id="dateNotice" class="hint">날짜별 내역은 이 기기에 자동 저장됩니다.</p>
-    </section>
-
-    <section class="summary-grid" aria-label="금액 요약">
-      <article class="summary-card">
-        <span>구매 완료</span><strong id="purchasedTotal">0원</strong>
-      </article>
-      <article class="summary-card">
-        <span>미구매</span><strong id="remainingTotal">0원</strong>
-      </article>
-      <article class="summary-card total-card">
-        <span>당일 전체 합계</span><strong id="dayTotal">0원</strong>
-      </article>
-    </section>
-
-    <section class="panel">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">STORE</p>
-          <h2>마트 선택</h2>
-        </div>
-        <span id="storeCount" class="count-pill">6개 마트</span>
-      </div>
-      <div id="storeTabs" class="store-tabs"></div>
-      <button id="customStoreNameBtn" class="text-btn custom-name-btn">여섯 번째 마트 이름 변경</button>
-      <div class="store-total-line">
-        <span id="selectedStoreName">이마트</span>
-        <strong id="selectedStoreTotal">0원</strong>
-      </div>
-    </section>
+    <p id="dateNotice" class="hint notice" hidden></p>
 
     <section class="panel list-panel">
       <div class="section-heading">
-        <div>
-          <p class="eyebrow">ITEMS</p>
-          <h2>상품 목록</h2>
+        <div class="store-title">
+          <h2 id="selectedStoreName">이마트</h2>
+          <button id="customStoreNameBtn" class="text-btn rename-btn" hidden>✏️ 이름 변경</button>
         </div>
-        <span id="itemCount" class="count-pill">0개</span>
+        <div class="store-sub"><span id="itemCount" class="count-pill">0개</span><strong id="selectedStoreTotal">0원</strong></div>
       </div>
 
-      <form id="itemForm" class="item-form">
-        <div class="photo-control">
-          <label for="photoInput" class="photo-button">＋ 사진 추가</label>
-          <input id="photoInput" type="file" accept="image/*" capture="environment">
-          <img id="photoPreview" alt="선택한 상품 사진 미리보기" hidden>
-          <button type="button" id="clearPhotoBtn" class="clear-photo" hidden>사진 삭제</button>
+      <form id="itemForm" class="item-form" autocomplete="off">
+        <div class="form-top">
+          <button type="button" id="photoBtn" class="photo-slot" aria-label="상품 사진 추가 또는 변경">
+            <span id="photoSlotLabel">＋<br>사진</span>
+            <img id="photoPreview" alt="선택한 상품 사진" hidden>
+          </button>
+          <div class="name-wrap">
+            <label class="field-label" for="itemName">상품명 <small>(초성 검색 가능)</small></label>
+            <input id="itemName" type="text" maxlength="80" placeholder="예: 우유 1L" required autocomplete="off" autocapitalize="off" enterkeyhint="next">
+            <div id="suggestBox" class="suggest" hidden></div>
+          </div>
         </div>
-        <label class="field-label" for="itemName">상품명</label>
-        <input id="itemName" type="text" maxlength="80" placeholder="예: 우유 1L" required>
         <div class="field-row">
           <div>
             <label class="field-label" for="itemPrice">단가(원)</label>
@@ -89,8 +69,8 @@
             <label class="field-label" for="itemQty">수량</label>
             <input id="itemQty" type="number" min="1" step="1" value="1" inputmode="numeric" required>
           </div>
+          <div id="formAmount" class="form-amount">금액 <strong>0원</strong></div>
         </div>
-        <div id="formAmount" class="form-amount">상품 금액 <strong>0원</strong></div>
         <div class="form-buttons">
           <button type="submit" id="saveItemBtn" class="primary-btn">상품 추가</button>
           <button type="button" id="cancelEditBtn" class="secondary-btn" hidden>수정 취소</button>
@@ -99,7 +79,7 @@
 
       <div class="list-subheading">
         <h3>구매할 상품 <span id="todoCount">0</span></h3>
-        <span>상품명 가나다순</span>
+        <span>가나다순</span>
       </div>
       <div id="todoList" class="item-list"></div>
       <div class="list-subheading completed-heading">
@@ -115,8 +95,65 @@
       </div>
       <div id="storeSummary" class="store-summary"></div>
     </section>
-    <p class="footer-note">데이터는 현재 사용 중인 브라우저의 기기에 저장됩니다. 브라우저 데이터 삭제 또는 기기 변경 전에는 별도 백업을 권장합니다.</p>
+    <p class="footer-note">날짜별 내역은 이 기기에 자동 저장됩니다. 데이터는 현재 사용 중인 브라우저의 기기에 저장되므로, 브라우저 데이터 삭제 또는 기기 변경 전에는 별도 백업을 권장합니다.</p>
   </main>
+
+  <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
+  <input id="galleryInput" type="file" accept="image/*" hidden>
+
+  <!-- 사진 추가 방법 선택 -->
+  <dialog id="photoSheet" class="sheet">
+    <div class="dialog-content">
+      <h2>상품 사진</h2>
+      <div class="sheet-grid">
+        <button type="button" id="shootBtn"><b>📷</b><span>사진 찍기</span></button>
+        <button type="button" id="galleryBtn"><b>🖼️</b><span>앨범에서 선택</span></button>
+        <button type="button" id="presetBtn"><b>🥛</b><span>기본 상품 그림</span></button>
+        <button type="button" id="libraryBtn"><b>📚</b><span>내 사진 보관함</span></button>
+      </div>
+      <div class="sheet-extra">
+        <button type="button" id="recropBtn" class="secondary-btn" hidden>✂️ 현재 사진 다시 자르기</button>
+        <button type="button" id="removePhotoBtn" class="secondary-btn" hidden>🗑️ 사진 삭제</button>
+      </div>
+      <button type="button" id="closeSheetBtn" class="secondary-btn wide">닫기</button>
+    </div>
+  </dialog>
+
+  <!-- 기본 그림 / 내 사진 보관함 -->
+  <dialog id="pickerDialog" class="fullsheet">
+    <div class="picker-wrap">
+      <div class="picker-top">
+        <strong id="pickerTitle">기본 상품 그림</strong>
+        <button type="button" id="pickerClose" class="text-btn">닫기</button>
+      </div>
+      <input id="pickerSearch" type="search" placeholder="상품명 또는 초성 검색" autocomplete="off">
+      <div id="pickerGrid" class="picker-grid"></div>
+    </div>
+  </dialog>
+
+  <!-- 사진 자르기 -->
+  <dialog id="cropDialog" class="crop-dialog">
+    <div class="crop-wrap">
+      <div class="crop-top">
+        <strong>필요한 상품만 선택하세요</strong>
+        <span>네모 칸을 끌어 옮기고, 모서리를 끌어 크기를 바꿉니다. 빈 곳을 끌면 새로 선택됩니다.</span>
+      </div>
+      <div id="cropStage" class="crop-stage">
+        <div id="cropArea" class="crop-area">
+          <canvas id="cropCanvas"></canvas>
+          <div id="cropBox" class="crop-box"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div>
+        </div>
+      </div>
+      <div class="crop-tools">
+        <button type="button" id="cropRatioBtn" class="tool-btn">비율: 정사각형</button>
+        <button type="button" id="cropRotateBtn" class="tool-btn">↻ 회전</button>
+      </div>
+      <div class="crop-actions">
+        <button type="button" id="cropCancelBtn" class="secondary-btn">취소</button>
+        <button type="button" id="cropApplyBtn" class="primary-btn">이 부분 사용</button>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="confirmDialog">
     <form method="dialog" class="dialog-content">
@@ -129,6 +166,7 @@
     </form>
   </dialog>
 
+  <script src="presets.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
