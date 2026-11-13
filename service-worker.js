@@ -1,4 +1,4 @@
-const CACHE_NAME="today-shopping-pwa-v2";
+const CACHE_NAME="today-shopping-pwa-v3";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./presets.js","./manifest.webmanifest","./icons/icon-192.png","./icons/icon-512.png"];
 self.addEventListener("install",event=>event.waitUntil(
   caches.open(CACHE_NAME).then(cache=>Promise.all(ASSETS.map(u=>cache.add(new Request(u,{cache:"reload"}))))).then(()=>self.skipWaiting())

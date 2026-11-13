@@ -1,25 +1,25 @@
 *{box-sizing:border-box}
 :root{--g:#008080;--line:#e5ece9;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;color:#202b29;background:#f2f4f3;font-synthesis:none;--sticky-h:200px}
-html{scroll-padding-top:calc(var(--sticky-h) + 8px)}
-body{margin:0;padding:0 0 max(20px,env(safe-area-inset-bottom))}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{margin:0;padding:0}
+#scroller{position:fixed;left:0;right:0;top:var(--sticky-h);bottom:0;overflow-y:auto;overscroll-behavior:contain;scroll-padding-top:8px;padding-bottom:max(20px,env(safe-area-inset-bottom))}
 button,input{font:inherit}
 button{cursor:pointer}
 
 /* ===== 상단 고정 영역 (적색선 위) ===== */
-.sticky-top{position:sticky;top:0;z-index:30;background:#f2f4f3;box-shadow:0 2px 8px #10302818}
+.sticky-top{position:fixed;top:0;left:0;right:0;z-index:30;background:#f2f4f3;box-shadow:0 2px 8px #10302818}
 .topbar{background:#008080;color:#fff;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .topbar h1{font-size:18px;margin:0;letter-spacing:-.6px}
 .top-right{display:flex;align-items:center;gap:8px}
 .install-btn{border:1px solid #ffffff80;color:#fff;background:#ffffff18;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700}
-.date-pick{position:relative;font-size:13px;font-weight:700;letter-spacing:.2px;padding:4px 2px;cursor:pointer}
-.date-pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer}
+.date-pick{border:0;background:none;color:#fff;font-size:13px;font-weight:700;letter-spacing:.2px;padding:6px 2px;cursor:pointer}
 .sticky-body{max-width:720px;margin:0 auto;padding:8px 10px 9px;display:grid;gap:7px}
 .action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .act-btn{min-height:38px;border:1px solid #dce6e2;background:#f8faf9;color:#43564f;border-radius:10px;padding:4px 6px;font-size:12.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;min-width:0}
 .act-btn span{white-space:nowrap}
 .act-btn small{font-size:10.5px;font-weight:700;color:#008080;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .summary-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 58px;gap:7px}
-.chip{border-radius:12px;padding:6px 9px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;column-gap:6px;min-width:0;border:1.5px solid}
+.chip{border-radius:12px;padding:6px 9px;display:flex;justify-content:space-between;align-items:baseline;align-content:center;flex-wrap:wrap;column-gap:6px;min-width:0;min-height:48px;border:1.5px solid}
 .chip span{font-size:10.5px;font-weight:700;white-space:nowrap}
 .chip strong{font-size:15px;letter-spacing:-.4px;white-space:nowrap;margin-left:auto}
 .chip-done{background:#fff2cc;border-color:#f0c36a;color:#7a5a12}
@@ -155,3 +155,19 @@ dialog::backdrop{background:#172b25a6}
 .store-choice.active small{color:#d6f2ee}
 #memoText{width:100%;border:1px solid #dce6e1;border-radius:10px;padding:10px;font-size:14px;line-height:1.5;resize:vertical;outline-color:#008080;font-family:inherit}
 .list-panel .section-heading{margin-bottom:14px}
+
+/* 달력 */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-head strong{font-size:16px}
+.cal-nav{width:38px;height:38px;border:1px solid #dce6e2;background:#f8faf9;border-radius:10px;font-size:20px;color:#43564f}
+.cal-week,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal-week{font-size:11px;font-weight:800;color:#7a8983;margin-bottom:4px}
+.cal-week span:first-child{color:#c0504d}
+.cal-day{aspect-ratio:1;border:0;border-radius:50%;background:none;font-size:13px;font-weight:600;color:#2f433c;padding:0}
+.cal-day.today{font-weight:900;text-decoration:underline}
+.cal-day.shop{background:#8250df;color:#fff;font-weight:800}
+.cal-day.sel{box-shadow:0 0 0 2.5px #008080 inset;font-weight:900}
+.cal-day.sel.shop{box-shadow:0 0 0 2.5px #fff inset,0 0 0 2.5px #008080}
+.cal-legend{display:flex;align-items:center;gap:6px;font-size:11px;color:#6f817a;margin:10px 0 0}
+.cal-legend i{display:inline-block;width:12px;height:12px;border-radius:50%}
+.dot-shop{background:#8250df}.dot-sel{background:#fff;box-shadow:0 0 0 2px #008080 inset;margin-left:8px}

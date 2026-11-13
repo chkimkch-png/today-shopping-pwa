@@ -49,13 +49,19 @@ function idbWrite(s,fn){
   });
 }
 const getDay = (date) => idbGet("days",date).then(r=>r||null);
-const saveDay = () => idbWrite("days",st=>st.put(dayData));
+const hasShopping = (d) => (d.stores||[]).some(s=>s.items&&s.items.length);
+let shoppingDays = new Set(); // 장 본 날(상품이 1개 이상 있는 날짜)
+async function refreshShoppingDays(){shoppingDays=new Set((await idbAll("days")).filter(hasShopping).map(d=>d.date));}
+const saveDay = async () => {
+  await idbWrite("days",st=>st.put(dayData));
+  if(hasShopping(dayData))shoppingDays.add(dayData.date);else shoppingDays.delete(dayData.date);
+};
 
 async function loadDate(date){
   currentDate=date;
   dayData=await getDay(date)||blankDay(date);
   if(!dayData.stores || dayData.stores.length!==6) dayData=blankDay(date);
-  $("shoppingDate").value=date;$("dateLabel").textContent=date.replace(/-/g,". ");
+  $("dateLabel").textContent=date.replace(/-/g,". ");
   setNotice(dayData.finished ? "종료 처리된 날짜의 내역을 보고 있습니다. 수정도 가능합니다." : "");
   resetForm();render();
 }
@@ -444,7 +450,6 @@ $("itemForm").addEventListener("submit",async e=>{
   await rememberProduct(name,price,photoData,!wasEditing);
   resetForm();render();
 });
-$("shoppingDate").addEventListener("change",e=>loadDate(e.target.value||localDateString(new Date())));
 $("newDayBtn").addEventListener("click",async()=>{
   const date=localDateString(new Date());
   if(date===currentDate){if(dayData.stores.some(s=>s.items.length)&&!await ask("새 장보기 시작","오늘 날짜의 기존 목록은 그대로 보관됩니다. 목록을 초기화하지 않고 오늘 날짜를 다시 엽니다."))return;}
@@ -458,6 +463,32 @@ $("customStoreNameBtn").addEventListener("click",async()=>{
   const name=prompt("여섯 번째 마트 이름을 입력하세요.",dayData.stores[5].name);
   if(name&&name.trim()){dayData.stores[5].name=name.trim().slice(0,24);await saveDay();render();}
 });
+
+/* ================= 달력 ================= */
+let calYear=0,calMonth=0;
+const pad2=(n)=>String(n).padStart(2,"0");
+function renderCalendar(){
+  $("calTitle").textContent=`${calYear}년 ${calMonth+1}월`;
+  const grid=$("calGrid");grid.innerHTML="";
+  const start=new Date(calYear,calMonth,1).getDay(),days=new Date(calYear,calMonth+1,0).getDate(),today=localDateString(new Date());
+  for(let i=0;i<start;i++)grid.appendChild(document.createElement("span"));
+  for(let d=1;d<=days;d++){
+    const ds=`${calYear}-${pad2(calMonth+1)}-${pad2(d)}`,shop=shoppingDays.has(ds);
+    const b=document.createElement("button");b.type="button";b.textContent=d;
+    b.className="cal-day"+(shop?" shop":"")+(ds===currentDate?" sel":"")+(ds===today?" today":"");
+    b.setAttribute("aria-label",`${ds.replace(/-/g,". ")}${shop?" 장 본 날":""}`);
+    b.addEventListener("click",async()=>{$("calendarDialog").close();await loadDate(ds);});
+    grid.appendChild(b);
+  }
+}
+function moveMonth(delta){const d=new Date(calYear,calMonth+delta,1);calYear=d.getFullYear();calMonth=d.getMonth();renderCalendar();}
+$("dateBtn").addEventListener("click",()=>{
+  const [y,m]=currentDate.split("-").map(Number);calYear=y;calMonth=m-1;renderCalendar();$("calendarDialog").showModal();
+});
+$("calPrev").addEventListener("click",()=>moveMonth(-1));
+$("calNext").addEventListener("click",()=>moveMonth(1));
+$("calClose").addEventListener("click",()=>$("calendarDialog").close());
+$("calToday").addEventListener("click",async()=>{$("calendarDialog").close();await loadDate(localDateString(new Date()));});
 
 /* ================= 장보기(마트) 선택 ================= */
 $("storeSelectBtn").addEventListener("click",()=>{
@@ -507,6 +538,6 @@ trackStickyHeight();
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(err=>console.warn("오프라인 기능 등록 실패",err)));}
 (async()=>{
-  try{db=await openDatabase();await loadProducts();await loadDate(currentDate);}
+  try{db=await openDatabase();await loadProducts();await refreshShoppingDays();await loadDate(currentDate);}
   catch(err){console.error(err);alert("기기 저장소를 열지 못했습니다. 브라우저 설정을 확인해 주세요.");}
 })();
