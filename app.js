@@ -181,7 +181,7 @@ function renderList(target,items,done){
 
 /* ================= 입력 폼 ================= */
 function resetForm(){
-  editingId=null;photoData="";$("itemForm").reset();$("itemQty").value=1;
+  editingId=null;photoData="";$("itemForm").reset();$("itemQty").value=1;updateNameClear();
   updatePhotoUI();hideSuggestions();
   $("saveItemBtn").innerHTML="상품<br>추가";$("cancelEditBtn").hidden=true;updateFormAmount();
 }
@@ -197,7 +197,7 @@ function updatePhotoUI(){
 function setPhoto(url){photoData=url||"";updatePhotoUI();}
 function beginEdit(itemId){
   const item=storeItems().find(x=>x.id===itemId);if(!item)return;
-  editingId=itemId;$("itemName").value=item.name;$("itemPrice").value=item.price;$("itemQty").value=item.qty;
+  editingId=itemId;$("itemName").value=item.name;updateNameClear();$("itemPrice").value=item.price;$("itemQty").value=item.qty;
   setPhoto(item.photo||"");hideSuggestions();
   $("saveItemBtn").innerHTML="상품<br>수정";$("cancelEditBtn").hidden=false;updateFormAmount();
   $("itemForm").scrollIntoView({behavior:"smooth",block:"start"});
@@ -216,6 +216,11 @@ function ask(title,message){
 }
 
 /* ================= 상품명 자동완성(초성 검색) ================= */
+const updateNameClear=()=>{$("nameClearBtn").hidden=!$("itemName").value;};
+$("nameClearBtn").addEventListener("mousedown",e=>e.preventDefault()); // 입력창 포커스(키보드) 유지
+$("nameClearBtn").addEventListener("click",()=>{
+  $("itemName").value="";updateNameClear();$("itemName").focus();showSuggestions();
+});
 function hideSuggestions(){const b=$("suggestBox");b.hidden=true;b.innerHTML="";}
 function showSuggestions(){
   const q=$("itemName").value;
@@ -245,7 +250,7 @@ function showSuggestions(){
   box.style.maxHeight=`${clamp(room,110,260)}px`;
 }
 function applySuggestion(p){
-  $("itemName").value=p.name;
+  $("itemName").value=p.name;updateNameClear();
   if(!$("itemPrice").value){
     const pr=p.prices&&p.prices[selectedStore]!=null?p.prices[selectedStore]:p.price;
     if(pr)$("itemPrice").value=pr;
@@ -258,7 +263,7 @@ $("itemName").addEventListener("focus",()=>{
   showSuggestions();
   setTimeout(()=>$("itemForm").scrollIntoView({block:"start",behavior:"smooth"}),250);
 });
-$("itemName").addEventListener("input",showSuggestions);
+$("itemName").addEventListener("input",()=>{updateNameClear();showSuggestions();});
 $("itemName").addEventListener("blur",()=>setTimeout(hideSuggestions,150));
 $("suggestBox").addEventListener("mousedown",e=>e.preventDefault()); // 목록을 누를 때 입력창 포커스가 풀리지 않게
 
@@ -329,7 +334,7 @@ function renderPicker(){
     t.append(vis,lb);
     t.addEventListener("click",async()=>{
       try{setPhoto(x.photo||await presetToDataURL(x.preset));}catch{alert("그림을 불러오지 못했습니다.");return;}
-      if(!$("itemName").value.trim())$("itemName").value=x.label;
+      if(!$("itemName").value.trim()){$("itemName").value=x.label;updateNameClear();}
       $("pickerDialog").close();
     });
     grid.appendChild(t);

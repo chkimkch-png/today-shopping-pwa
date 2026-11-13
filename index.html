@@ -48,7 +48,10 @@
       <div class="form-fields">
         <div class="name-row">
           <label for="itemName">상품명</label>
-          <input id="itemName" type="text" maxlength="80" placeholder="예: 우유 1L" required autocomplete="off" autocapitalize="off" enterkeyhint="next">
+          <div class="name-input-wrap">
+            <input id="itemName" type="text" maxlength="80" placeholder="예: 우유 1L" required autocomplete="off" autocapitalize="off" enterkeyhint="next">
+            <button type="button" id="nameClearBtn" class="name-clear" aria-label="상품명 모두 지우기" hidden>✕</button>
+          </div>
           <button type="submit" id="saveItemBtn" class="add-btn">상품<br>추가</button>
         </div>
         <div class="field-row">
