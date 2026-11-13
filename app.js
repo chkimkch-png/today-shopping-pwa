@@ -172,7 +172,7 @@ function renderList(target,items,done){
     main.append(nm,meta);
     const actions=document.createElement("div");actions.className="item-actions";
     const edit=document.createElement("button");edit.type="button";edit.textContent="수정";edit.addEventListener("click",()=>beginEdit(item.id));
-    const del=document.createElement("button");del.type="button";del.textContent="삭제";del.addEventListener("click",()=>deleteItem(item.id));
+    const del=document.createElement("button");del.type="button";del.className="del-btn";del.textContent="🗑 삭제";del.setAttribute("aria-label",`${item.name} 삭제`);del.addEventListener("click",()=>deleteItem(item.id));
     actions.append(edit,del);main.appendChild(actions);row.appendChild(main);
     const sum=document.createElement("div");sum.className="item-amount";sum.textContent=won(amount(item));row.appendChild(sum);
     target.appendChild(row);
@@ -203,7 +203,8 @@ function beginEdit(itemId){
   $("itemForm").scrollIntoView({behavior:"smooth",block:"start"});
 }
 async function deleteItem(itemId){
-  if(!await ask("상품 삭제","이 상품을 목록에서 삭제할까요?"))return;
+  const target=storeItems().find(x=>x.id===itemId);
+  if(!await ask("상품 삭제",`'${target?target.name:"이 상품"}'을(를) 목록에서 삭제할까요?`))return;
   const items=storeItems(),idx=items.findIndex(x=>x.id===itemId);if(idx>=0)items.splice(idx,1);
   if(editingId===itemId)resetForm();await saveDay();render();
 }
