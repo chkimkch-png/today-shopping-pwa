@@ -12,26 +12,28 @@
   <title>오늘의 장보기</title>
 </head>
 <body>
-  <!-- 상단 고정 영역: 제목 · 날짜 · 구매/미구매 · 마트 선택 + 당일 합계 -->
+  <!-- 적색선 위: 상단 고정 영역 -->
   <div class="sticky-top" id="stickyTop">
     <header class="topbar">
       <h1>오늘의 장보기</h1>
-      <button id="installBtn" class="install-btn" hidden>앱 설치</button>
+      <div class="top-right">
+        <button id="installBtn" class="install-btn" hidden>앱 설치</button>
+        <label class="date-pick">
+          <span id="dateLabel">2026. 11. 12</span>
+          <input type="date" id="shoppingDate" aria-label="장보기 날짜 선택">
+        </label>
+      </div>
     </header>
     <div class="sticky-body">
-      <div class="date-line">
-        <input type="date" id="shoppingDate" aria-label="장보기 날짜">
-        <button id="todayBtn" class="text-btn">오늘</button>
-        <button id="newDayBtn" class="mini-btn">새 장보기</button>
-        <button id="finishDayBtn" class="mini-btn">장보기 종료</button>
+      <div class="action-row">
+        <button type="button" id="storeSelectBtn" class="act-btn"><span>장보기 선택</span><small id="storeBtnName">이마트</small></button>
+        <button type="button" id="newDayBtn" class="act-btn"><span>새 장보기</span></button>
+        <button type="button" id="finishDayBtn" class="act-btn"><span>장보기 종료</span></button>
       </div>
       <div class="summary-row" aria-label="금액 요약">
-        <div class="chip"><span>구매 완료</span><strong id="purchasedTotal">0원</strong></div>
-        <div class="chip"><span>미구매</span><strong id="remainingTotal">0원</strong></div>
-      </div>
-      <div class="store-row">
-        <div id="storeTabs" class="store-tabs" role="group" aria-label="마트 선택"></div>
-        <div class="total-card"><span>당일 전체 합계</span><strong id="dayTotal">0원</strong></div>
+        <div class="chip chip-done"><span>구매 완료</span><strong id="purchasedTotal">0원</strong></div>
+        <div class="chip chip-total"><span>당일전체 합계</span><strong id="dayTotal">0원</strong></div>
+        <button type="button" id="memoBtn" class="memo-btn">메모</button>
       </div>
     </div>
   </div>
@@ -39,26 +41,17 @@
   <main>
     <p id="dateNotice" class="hint notice" hidden></p>
 
-    <section class="panel list-panel">
-      <div class="section-heading">
-        <div class="store-title">
-          <h2 id="selectedStoreName">이마트</h2>
-          <button id="customStoreNameBtn" class="text-btn rename-btn" hidden>✏️ 이름 변경</button>
-        </div>
-        <div class="store-sub"><span id="itemCount" class="count-pill">0개</span><strong id="selectedStoreTotal">0원</strong></div>
-      </div>
-
-      <form id="itemForm" class="item-form" autocomplete="off">
-        <div class="form-top">
-          <button type="button" id="photoBtn" class="photo-slot" aria-label="상품 사진 추가 또는 변경">
-            <span id="photoSlotLabel">＋<br>사진</span>
-            <img id="photoPreview" alt="선택한 상품 사진" hidden>
-          </button>
-          <div class="name-wrap">
-            <label class="field-label" for="itemName">상품명 <small>(초성 검색 가능)</small></label>
-            <input id="itemName" type="text" maxlength="80" placeholder="예: 우유 1L" required autocomplete="off" autocapitalize="off" enterkeyhint="next">
-            <div id="suggestBox" class="suggest" hidden></div>
-          </div>
+    <!-- 적색선 ~ 청색선: 상품 입력 영역 (스크롤됨) -->
+    <form id="itemForm" class="item-form" autocomplete="off">
+      <button type="button" id="photoBtn" class="photo-slot" aria-label="상품 사진 추가 또는 변경">
+        <span id="photoSlotLabel">＋<br>사진</span>
+        <img id="photoPreview" alt="선택한 상품 사진" hidden>
+      </button>
+      <div class="form-fields">
+        <div class="name-row">
+          <label for="itemName">상품명</label>
+          <input id="itemName" type="text" maxlength="80" placeholder="예: 우유 1L" required autocomplete="off" autocapitalize="off" enterkeyhint="next">
+          <button type="submit" id="saveItemBtn" class="add-btn">상품<br>추가</button>
         </div>
         <div class="field-row">
           <div>
@@ -69,13 +62,25 @@
             <label class="field-label" for="itemQty">수량</label>
             <input id="itemQty" type="number" min="1" step="1" value="1" inputmode="numeric" required>
           </div>
-          <div id="formAmount" class="form-amount">금액 <strong>0원</strong></div>
+          <div>
+            <span class="field-label">금액</span>
+            <div id="formAmount" class="amount-box">0원</div>
+          </div>
         </div>
-        <div class="form-buttons">
-          <button type="submit" id="saveItemBtn" class="primary-btn">상품 추가</button>
-          <button type="button" id="cancelEditBtn" class="secondary-btn" hidden>수정 취소</button>
+      </div>
+      <div id="suggestBox" class="suggest" hidden></div>
+      <button type="button" id="cancelEditBtn" class="secondary-btn edit-cancel" hidden>수정 취소</button>
+    </form>
+
+    <!-- 청색선 아래: 이전 버전과 동일 -->
+    <section class="panel list-panel">
+      <div class="section-heading">
+        <div class="store-title">
+          <h2 id="selectedStoreName">이마트</h2>
+          <button id="customStoreNameBtn" class="text-btn rename-btn" hidden>✏️ 이름 변경</button>
         </div>
-      </form>
+        <div class="store-sub"><span id="itemCount" class="count-pill">0개</span><strong id="selectedStoreTotal">0원</strong></div>
+      </div>
 
       <div class="list-subheading">
         <h3>구매할 상품 <span id="todoCount">0</span></h3>
@@ -100,6 +105,29 @@
 
   <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
   <input id="galleryInput" type="file" accept="image/*" hidden>
+
+  <!-- 마트(장보기) 선택 -->
+  <dialog id="storeDialog" class="sheet">
+    <div class="dialog-content">
+      <h2>장보기 선택 (마트)</h2>
+      <div id="storeChoices" class="store-choices"></div>
+      <button type="button" id="storeClose" class="secondary-btn wide">닫기</button>
+    </div>
+  </dialog>
+
+  <!-- 메모 -->
+  <dialog id="memoDialog">
+    <div class="dialog-content">
+      <h2 id="memoTitle">메모</h2>
+      <textarea id="memoText" rows="8" maxlength="2000" placeholder="이 날짜의 장보기 메모를 적어 두세요."></textarea>
+      <p id="memoMeta" class="hint"></p>
+      <div class="dialog-actions">
+        <button type="button" id="memoClear" class="secondary-btn">지우기</button>
+        <button type="button" id="memoCancel" class="secondary-btn">닫기</button>
+        <button type="button" id="memoSave" class="primary-btn">저장</button>
+      </div>
+    </div>
+  </dialog>
 
   <!-- 사진 추가 방법 선택 -->
   <dialog id="photoSheet" class="sheet">

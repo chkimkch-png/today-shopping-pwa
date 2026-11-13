@@ -20,7 +20,8 @@ const won = (n) => `${Number(n || 0).toLocaleString("ko-KR")}원`;
 const blankDay = (date) => ({
   date,
   stores: [...STORE_NAMES, "나만의 마트"].map((name, i) => ({name, custom:i===5, items:[]})),
-  finished: false
+  finished: false,
+  memo: ""
 });
 const id = () => `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
 const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
@@ -54,7 +55,7 @@ async function loadDate(date){
   currentDate=date;
   dayData=await getDay(date)||blankDay(date);
   if(!dayData.stores || dayData.stores.length!==6) dayData=blankDay(date);
-  $("shoppingDate").value=date;
+  $("shoppingDate").value=date;$("dateLabel").textContent=date.replace(/-/g,". ");
   setNotice(dayData.finished ? "종료 처리된 날짜의 내역을 보고 있습니다. 수정도 가능합니다." : "");
   resetForm();render();
 }
@@ -130,18 +131,9 @@ async function forgetProduct(key){
 function render(){
   const sums=totals();
   $("purchasedTotal").textContent=won(sums.purchased);
-  $("remainingTotal").textContent=won(sums.remaining);
   $("dayTotal").textContent=won(sums.total);
-  $("storeTabs").innerHTML="";
-  dayData.stores.forEach((s,i)=>{
-    const b=document.createElement("button");b.type="button";b.className="store-tab"+(i===selectedStore?" active":"");
-    b.textContent=s.name;b.title=s.name;b.setAttribute("aria-pressed",i===selectedStore);
-    b.addEventListener("click",()=>{
-      if(i===selectedStore)return;
-      selectedStore=i;if(editingId)resetForm();hideSuggestions();render();
-    });
-    $("storeTabs").appendChild(b);
-  });
+  $("storeBtnName").textContent=dayData.stores[selectedStore].name;
+  $("memoBtn").classList.toggle("has-memo",!!(dayData.memo&&dayData.memo.trim()));
   const store=dayData.stores[selectedStore], storeTotal=store.items.reduce((a,x)=>a+amount(x),0);
   $("selectedStoreName").textContent=store.name;$("selectedStoreTotal").textContent=won(storeTotal);
   $("customStoreNameBtn").hidden=selectedStore!==5;
@@ -185,11 +177,11 @@ function renderList(target,items,done){
 function resetForm(){
   editingId=null;photoData="";$("itemForm").reset();$("itemQty").value=1;
   updatePhotoUI();hideSuggestions();
-  $("saveItemBtn").textContent="상품 추가";$("cancelEditBtn").hidden=true;updateFormAmount();
+  $("saveItemBtn").innerHTML="상품<br>추가";$("cancelEditBtn").hidden=true;updateFormAmount();
 }
 function updateFormAmount(){
   const p=Math.max(0,Number($("itemPrice").value)||0),q=Math.max(0,Number($("itemQty").value)||0);
-  $("formAmount").innerHTML=`금액 <strong>${won(p*q)}</strong>`;
+  $("formAmount").textContent=won(p*q);
 }
 function updatePhotoUI(){
   const has=!!photoData;
@@ -201,8 +193,8 @@ function beginEdit(itemId){
   const item=storeItems().find(x=>x.id===itemId);if(!item)return;
   editingId=itemId;$("itemName").value=item.name;$("itemPrice").value=item.price;$("itemQty").value=item.qty;
   setPhoto(item.photo||"");hideSuggestions();
-  $("saveItemBtn").textContent="상품 수정";$("cancelEditBtn").hidden=false;updateFormAmount();
-  $("itemName").scrollIntoView({behavior:"smooth",block:"center"});
+  $("saveItemBtn").innerHTML="상품<br>수정";$("cancelEditBtn").hidden=false;updateFormAmount();
+  $("itemForm").scrollIntoView({behavior:"smooth",block:"start"});
 }
 async function deleteItem(itemId){
   if(!await ask("상품 삭제","이 상품을 목록에서 삭제할까요?"))return;
@@ -240,8 +232,10 @@ function showSuggestions(){
     row.append(pick,del);box.appendChild(row);
   });
   box.hidden=false;
+  const fr=$("itemForm").getBoundingClientRect(),ir=$("itemName").getBoundingClientRect();
+  box.style.top=`${ir.bottom-fr.top+4}px`;
   const vv=window.visualViewport,vh=vv?vv.height:window.innerHeight;
-  const room=vh-$("itemName").getBoundingClientRect().bottom-16;
+  const room=vh-ir.bottom-16;
   box.style.maxHeight=`${clamp(room,110,260)}px`;
 }
 function applySuggestion(p){
@@ -256,7 +250,7 @@ function applySuggestion(p){
 }
 $("itemName").addEventListener("focus",()=>{
   showSuggestions();
-  setTimeout(()=>$("itemName").closest(".name-wrap").scrollIntoView({block:"start",behavior:"smooth"}),250);
+  setTimeout(()=>$("itemForm").scrollIntoView({block:"start",behavior:"smooth"}),250);
 });
 $("itemName").addEventListener("input",showSuggestions);
 $("itemName").addEventListener("blur",()=>setTimeout(hideSuggestions,150));
@@ -451,7 +445,6 @@ $("itemForm").addEventListener("submit",async e=>{
   resetForm();render();
 });
 $("shoppingDate").addEventListener("change",e=>loadDate(e.target.value||localDateString(new Date())));
-$("todayBtn").addEventListener("click",()=>loadDate(localDateString(new Date())));
 $("newDayBtn").addEventListener("click",async()=>{
   const date=localDateString(new Date());
   if(date===currentDate){if(dayData.stores.some(s=>s.items.length)&&!await ask("새 장보기 시작","오늘 날짜의 기존 목록은 그대로 보관됩니다. 목록을 초기화하지 않고 오늘 날짜를 다시 엽니다."))return;}
@@ -464,6 +457,40 @@ $("finishDayBtn").addEventListener("click",async()=>{
 $("customStoreNameBtn").addEventListener("click",async()=>{
   const name=prompt("여섯 번째 마트 이름을 입력하세요.",dayData.stores[5].name);
   if(name&&name.trim()){dayData.stores[5].name=name.trim().slice(0,24);await saveDay();render();}
+});
+
+/* ================= 장보기(마트) 선택 ================= */
+$("storeSelectBtn").addEventListener("click",()=>{
+  const box=$("storeChoices");box.innerHTML="";
+  dayData.stores.forEach((s,i)=>{
+    const b=document.createElement("button");b.type="button";b.className="store-choice"+(i===selectedStore?" active":"");
+    const n=document.createElement("span");n.textContent=s.name;
+    const t=document.createElement("small");t.textContent=`${won(s.items.reduce((x,it)=>x+amount(it),0))} · ${s.items.length}개`;
+    b.append(n,t);
+    b.addEventListener("click",()=>{
+      if(i!==selectedStore){selectedStore=i;if(editingId)resetForm();hideSuggestions();render();}
+      $("storeDialog").close();
+    });
+    box.appendChild(b);
+  });
+  $("storeDialog").showModal();
+});
+$("storeClose").addEventListener("click",()=>$("storeDialog").close());
+
+/* ================= 메모 ================= */
+function memoMeta(){
+  $("memoMeta").textContent=dayData.memoUpdated?`마지막 저장: ${new Date(dayData.memoUpdated).toLocaleString("ko-KR")}`:"아직 저장된 메모가 없습니다.";
+}
+$("memoBtn").addEventListener("click",()=>{
+  $("memoTitle").textContent=`메모 · ${currentDate.replace(/-/g,". ")}`;
+  $("memoText").value=dayData.memo||"";memoMeta();$("memoDialog").showModal();
+});
+$("memoClear").addEventListener("click",()=>{$("memoText").value="";$("memoText").focus();});
+$("memoCancel").addEventListener("click",()=>$("memoDialog").close());
+$("memoSave").addEventListener("click",async()=>{
+  const t=$("memoText").value.trim().slice(0,2000);
+  dayData.memo=t;dayData.memoUpdated=t?Date.now():0;
+  await saveDay();$("memoDialog").close();render();
 });
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstallPrompt=e;$("installBtn").hidden=false;});
 $("installBtn").addEventListener("click",async()=>{
