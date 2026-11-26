@@ -191,3 +191,26 @@ dialog::backdrop{background:#172b25a6}
 .history-choice{width:100%;border:1px solid #dfe8e4;background:#f7faf8;border-radius:11px;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;color:#2f433c}
 .history-choice strong{font-size:14px}
 .history-choice small{font-size:12px;color:#6f817a;white-space:nowrap}
+
+
+/* 전체 앱 글자 크기 통일: '장보기 선택 (마트)' 제목의 17px 기준 */
+body, body * {
+  font-size: 17px !important;
+}
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.copy-today-btn {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #008b83;
+  color: #fff;
+  font-weight: 800;
+  line-height: 1.25;
+}

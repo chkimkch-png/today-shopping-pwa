@@ -98,10 +98,49 @@ async function loadDate(date){
   if(!dayData.stores || dayData.stores.length!==6) dayData=blankDay(date);
   else dayData.stores = reorderStores(dayData.stores);
   $("dateLabel").textContent=date.replace(/-/g,". ");
-  setNotice(dayData.finished ? "종료 처리된 날짜의 내역을 보고 있습니다. 수정도 가능합니다." : "");
+  if(date!==localDateString(new Date())){
+    setNotice("과거 장보기 내역을 보고 있습니다. 원본은 유지됩니다. 오늘 장보기에 사용하려면 오른쪽 버튼을 누르세요.",true);
+  }else{
+    setNotice(dayData.finished ? "종료 처리된 날짜의 내역을 보고 있습니다. 수정도 가능합니다." : "",false);
+  }
   resetForm();render();
 }
-function setNotice(text){const n=$("dateNotice");n.textContent=text;n.hidden=!text;}
+function setNotice(text,showCopyButton=false){
+  const n=$("dateNotice");n.replaceChildren();
+  if(text)n.appendChild(document.createTextNode(text));
+  if(showCopyButton){
+    const b=document.createElement("button");
+    b.type="button";b.className="copy-today-btn";b.textContent="오늘 날짜로 복사";
+    b.addEventListener("click",()=>copyDayToToday(currentDate,true));
+    n.appendChild(b);
+  }
+  n.hidden=!text;
+}
+
+async function copyDayToToday(sourceDate,showMessage=true){
+  const today=localDateString(new Date());
+  if(sourceDate===today){await loadDate(today);return;}
+  const source=await getDay(sourceDate);
+  if(!source || !hasShopping(source)){alert("복사할 상품이 있는 과거 내역이 없습니다.");return;}
+  const count=(source.stores||[]).reduce((n,s)=>n+(s.items||[]).length,0);
+  if(!await ask("오늘 장보기로 복사",`${formatDateLabel(sourceDate)}의 상품 ${count}개를 오늘 날짜에 복사할까요? 과거 원본은 그대로 보존됩니다.`))return;
+
+  let target=await getDay(today)||blankDay(today);
+  if(!target.stores || target.stores.length!==6)target=blankDay(today);
+  else target.stores=reorderStores(target.stores);
+  const targetByName=new Map(target.stores.map((store,index)=>[store.name,index]));
+  reorderStores(source.stores||[]).forEach(sourceStore=>{
+    const targetIndex=targetByName.has(sourceStore.name)?targetByName.get(sourceStore.name):(sourceStore.custom?5:-1);
+    if(targetIndex<0)return;
+    const destination=target.stores[targetIndex];
+    (sourceStore.items||[]).forEach(item=>destination.items.push({...item,id:id(),done:false}));
+  });
+  target.finished=false;
+  await idbWrite("days",st=>st.put(target));
+  if(hasShopping(target))shoppingDays.add(today);
+  await loadDate(today);
+  if(showMessage)alert(`${formatDateLabel(sourceDate)}의 상품을 오늘 날짜(${formatDateLabel(today)})로 복사했습니다. 이제 추가·수정하는 상품은 오늘 내역에 저장됩니다.`);
+}
 function storeItems(){return dayData.stores[selectedStore].items;}
 function amount(item){return Math.max(0,Number(item.price)||0)*Math.max(0,Number(item.qty)||0);}
 function nameCompare(a,b){return a.name.localeCompare(b.name,"ko-KR",{sensitivity:"base"});}
@@ -485,6 +524,14 @@ $("itemForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const name=$("itemName").value.trim(),price=Number($("itemPrice").value),qty=Number($("itemQty").value);
   if(!name||!Number.isFinite(price)||price<0||!Number.isInteger(qty)||qty<1){alert("상품명, 0원 이상의 단가, 1개 이상의 정수 수량을 입력해 주세요.");return;}
+  if(currentDate!==localDateString(new Date())){
+    const sourceDate=currentDate,savedPhoto=photoData;
+    await copyDayToToday(sourceDate,false);
+    if(currentDate!==localDateString(new Date()))return;
+    $("itemName").value=name;$("itemPrice").value=String(price);$("itemQty").value=String(qty);
+    photoData=savedPhoto;updatePhotoUI();updateFormAmount();
+    editingId=null;
+  }
   const items=storeItems(),wasEditing=!!editingId;
   if(editingId){const old=items.find(x=>x.id===editingId);if(old){old.name=name;old.price=price;old.qty=qty;old.photo=photoData;}}
   else items.push({id:id(),name,price,qty,photo:photoData,done:false});
@@ -580,41 +627,8 @@ async function openHistoryDialog(){
   $("historyDialog").showModal();
 }
 async function importHistoryToToday(sourceDate){
-  const source=await getDay(sourceDate);
-  if(!source || !hasShopping(source)){alert("선택한 날짜에 불러올 상품이 없습니다.");return;}
-  const totalCount=(source.stores||[]).reduce((n,s)=>n+(s.items||[]).length,0);
-  if(!await ask("오늘 장보기로 불러오기",
-    `${formatDateLabel(sourceDate)}의 상품 ${totalCount}개를 오늘 목록에 추가할까요? 기존 오늘 목록은 유지됩니다. 가져온 상품은 미구매 상태로 복사됩니다.`))return;
-
-  const today=localDateString(new Date());
-  let target=await getDay(today)||blankDay(today);
-  if(!target.stores || target.stores.length!==6)target=blankDay(today);
-  else target.stores=reorderStores(target.stores);
-  const targetByName=new Map(target.stores.map((store,index)=>[store.name,index]));
-  const sourceStores=reorderStores(source.stores||[]);
-  sourceStores.forEach(sourceStore=>{
-    const targetIndex=targetByName.has(sourceStore.name)
-      ?targetByName.get(sourceStore.name)
-      :(sourceStore.custom?5:-1);
-    if(targetIndex<0)return;
-    const destination=target.stores[targetIndex];
-    (sourceStore.items||[]).forEach(item=>{
-      destination.items.push({
-        ...item,
-        id:id(),
-        done:false
-      });
-    });
-  });
-  target.finished=false;
-  currentDate=today;
-  dayData=target;
-  selectedStore=0;
-  resetForm();
-  await saveDay();
-  await loadDate(today);
-  $("historyDialog").close();
-  alert(`${formatDateLabel(sourceDate)}의 장보기 내역을 오늘 목록에 추가했습니다. 상품을 수정해서 사용하세요.`);
+  await copyDayToToday(sourceDate,true);
+  if($("historyDialog").open)$("historyDialog").close();
 }
 $("historyOpenBtn").addEventListener("click",openHistoryDialog);
 $("historyClose").addEventListener("click",()=>$("historyDialog").close());
