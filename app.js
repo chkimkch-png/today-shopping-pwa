@@ -1,7 +1,7 @@
 "use strict";
-const STORE_NAMES = ["이마트","탑마트","롯데맥스","제일종합","5일장"];
+const STORE_NAMES = ["탑마트","제일종합","이마트","롯데맥스","5일장"];
 const DB_NAME = "today-shopping-pwa";
-const DB_VERSION = 2; // v2: 상품명 기록(products) 저장소 추가. 기존 날짜별 데이터(days)는 그대로 유지됨
+const DB_VERSION = 3; // v3: 마트 표시 순서 변경에 맞춰 상품별 과거 단가 인덱스도 이관
 let db;
 const localDateString = (d) => {
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
@@ -26,14 +26,49 @@ const blankDay = (date) => ({
 const id = () => `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
 const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
 
+// 저장된 과거 날짜도 마트 이름을 기준으로 새 화면 순서에 맞춘다.
+// 상품 배열 자체는 이동만 하므로 기존 상품·가격·사진 데이터는 보존된다.
+function reorderStores(stores){
+  const remaining=[...stores];
+  const ordered=STORE_NAMES.map(name=>{
+    const index=remaining.findIndex(s=>s.name===name);
+    return index>=0?remaining.splice(index,1)[0]:{name,custom:false,items:[]};
+  });
+  const customIndex=remaining.findIndex(s=>s.custom===true);
+  const custom=customIndex>=0?remaining.splice(customIndex,1)[0]:(remaining[0]||{name:"나만의 마트",custom:true,items:[]});
+  custom.custom=true;
+  ordered.push(custom);
+  return ordered;
+}
+
 /* ================= 저장소(IndexedDB) ================= */
 function openDatabase(){
   return new Promise((resolve,reject)=>{
     const request=indexedDB.open(DB_NAME,DB_VERSION);
-    request.onupgradeneeded=()=>{
+    request.onupgradeneeded=(event)=>{
       const d=request.result;
       if(!d.objectStoreNames.contains("days"))d.createObjectStore("days",{keyPath:"date"});
       if(!d.objectStoreNames.contains("products"))d.createObjectStore("products",{keyPath:"key"});
+      // 기존 상품 기록의 마트별 단가 인덱스: 구 0,1,2,3,4 → 신 2,0,3,1,4
+      if(event.oldVersion<3 && d.objectStoreNames.contains("products")){
+        const store=request.transaction.objectStore("products");
+        const cursor=store.openCursor();
+        cursor.onsuccess=()=>{
+          const c=cursor.result;
+          if(!c)return;
+          const value=c.value;
+          const old=value.prices||{};
+          const remapped={};
+          if(old[1]!=null)remapped[0]=old[1]; // 탑마트
+          if(old[3]!=null)remapped[1]=old[3]; // 제일종합
+          if(old[0]!=null)remapped[2]=old[0]; // 이마트
+          if(old[2]!=null)remapped[3]=old[2]; // 롯데맥스
+          if(old[4]!=null)remapped[4]=old[4]; // 5일장
+          value.prices=remapped;
+          c.update(value);
+          c.continue();
+        };
+      }
     };
     request.onsuccess=()=>resolve(request.result);
     request.onerror=()=>reject(request.error);
@@ -61,6 +96,7 @@ async function loadDate(date){
   currentDate=date;
   dayData=await getDay(date)||blankDay(date);
   if(!dayData.stores || dayData.stores.length!==6) dayData=blankDay(date);
+  else dayData.stores = reorderStores(dayData.stores);
   $("dateLabel").textContent=date.replace(/-/g,". ");
   setNotice(dayData.finished ? "종료 처리된 날짜의 내역을 보고 있습니다. 수정도 가능합니다." : "");
   resetForm();render();
@@ -514,6 +550,75 @@ $("storeSelectBtn").addEventListener("click",()=>{
 });
 $("storeClose").addEventListener("click",()=>$("storeDialog").close());
 
+/* ================= 과거 장보기 불러오기 ================= */
+function formatDateLabel(date){
+  return date.replace(/^(\\d{4})-(\\d{2})-(\\d{2})$/, "$1. $2. $3");
+}
+async function openHistoryDialog(){
+  const all=(await idbAll("days"))
+    .filter(d=>d.date!==localDateString(new Date()) && hasShopping(d))
+    .sort((a,b)=>b.date.localeCompare(a.date));
+  const list=$("historyList");list.innerHTML="";
+  if(!all.length){
+    const empty=document.createElement("div");
+    empty.className="empty-state";
+    empty.textContent="불러올 과거 장보기 내역이 없습니다.";
+    list.appendChild(empty);
+  }else{
+    all.forEach(day=>{
+      const count=(day.stores||[]).reduce((n,s)=>n+(s.items||[]).length,0);
+      const total=(day.stores||[]).reduce((n,s)=>n+(s.items||[]).reduce((m,it)=>m+amount(it),0),0);
+      const b=document.createElement("button");
+      b.type="button";b.className="history-choice";
+      const title=document.createElement("strong");title.textContent=formatDateLabel(day.date);
+      const detail=document.createElement("small");detail.textContent=`${count}개 상품 · ${won(total)}`;
+      b.append(title,detail);
+      b.addEventListener("click",()=>importHistoryToToday(day.date));
+      list.appendChild(b);
+    });
+  }
+  $("historyDialog").showModal();
+}
+async function importHistoryToToday(sourceDate){
+  const source=await getDay(sourceDate);
+  if(!source || !hasShopping(source)){alert("선택한 날짜에 불러올 상품이 없습니다.");return;}
+  const totalCount=(source.stores||[]).reduce((n,s)=>n+(s.items||[]).length,0);
+  if(!await ask("오늘 장보기로 불러오기",
+    `${formatDateLabel(sourceDate)}의 상품 ${totalCount}개를 오늘 목록에 추가할까요? 기존 오늘 목록은 유지됩니다. 가져온 상품은 미구매 상태로 복사됩니다.`))return;
+
+  const today=localDateString(new Date());
+  let target=await getDay(today)||blankDay(today);
+  if(!target.stores || target.stores.length!==6)target=blankDay(today);
+  else target.stores=reorderStores(target.stores);
+  const targetByName=new Map(target.stores.map((store,index)=>[store.name,index]));
+  const sourceStores=reorderStores(source.stores||[]);
+  sourceStores.forEach(sourceStore=>{
+    const targetIndex=targetByName.has(sourceStore.name)
+      ?targetByName.get(sourceStore.name)
+      :(sourceStore.custom?5:-1);
+    if(targetIndex<0)return;
+    const destination=target.stores[targetIndex];
+    (sourceStore.items||[]).forEach(item=>{
+      destination.items.push({
+        ...item,
+        id:id(),
+        done:false
+      });
+    });
+  });
+  target.finished=false;
+  currentDate=today;
+  dayData=target;
+  selectedStore=0;
+  resetForm();
+  await saveDay();
+  await loadDate(today);
+  $("historyDialog").close();
+  alert(`${formatDateLabel(sourceDate)}의 장보기 내역을 오늘 목록에 추가했습니다. 상품을 수정해서 사용하세요.`);
+}
+$("historyOpenBtn").addEventListener("click",openHistoryDialog);
+$("historyClose").addEventListener("click",()=>$("historyDialog").close());
+
 /* ================= 메모 ================= */
 function memoMeta(){
   $("memoMeta").textContent=dayData.memoUpdated?`마지막 저장: ${new Date(dayData.memoUpdated).toLocaleString("ko-KR")}`:"아직 저장된 메모가 없습니다.";
@@ -542,7 +647,7 @@ function trackStickyHeight(){
 }
 trackStickyHeight();
 
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(err=>console.warn("오프라인 기능 등록 실패",err)));}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/service-worker.js").catch(err=>console.warn("오프라인 기능 등록 실패",err)));}
 (async()=>{
   try{db=await openDatabase();await loadProducts();await refreshShoppingDays();await loadDate(currentDate);}
   catch(err){console.error(err);alert("기기 저장소를 열지 못했습니다. 브라우저 설정을 확인해 주세요.");}

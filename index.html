@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#176b5b">
   <meta name="description" content="마트별 장보기 목록과 당일 지출을 간편하게 관리하는 앱">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="styles.css">
   <title>오늘의 장보기</title>
 </head>
@@ -119,9 +119,22 @@
       <div class="cal-week"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
       <div id="calGrid" class="cal-grid"></div>
       <div class="cal-legend"><i class="dot-shop"></i>장 본 날 <i class="dot-sel"></i>선택한 날</div>
-      <div class="dialog-actions">
+      <div class="dialog-actions calendar-actions">
+        <button type="button" id="historyOpenBtn" class="secondary-btn">과거 내역 불러오기</button>
         <button type="button" id="calToday" class="secondary-btn">오늘</button>
         <button type="button" id="calClose" class="primary-btn">닫기</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 과거 장보기 내역을 오늘 목록에 복사 -->
+  <dialog id="historyDialog">
+    <div class="dialog-content">
+      <h2>과거 장보기 불러오기</h2>
+      <p class="hint">날짜를 선택하면 해당 날짜의 상품을 오늘 장보기 목록에 추가합니다. 기존 오늘 목록은 유지되며, 가져온 상품은 다시 구매할 수 있도록 미구매 상태로 등록됩니다.</p>
+      <div id="historyList" class="history-list"></div>
+      <div class="dialog-actions">
+        <button type="button" id="historyClose" class="secondary-btn">닫기</button>
       </div>
     </div>
   </dialog>
